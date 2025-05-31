@@ -203,51 +203,65 @@ def limpar_dados_dia():
 # Limpar histórico diário
 def limpar_todos_dados():
     """Limpa todos os dados do sistema de forma definitiva"""
-    # Confirmar ação
+    # Confirmar ação em duas etapas
     if not st.session_state.get('confirmar_limpeza', False):
         st.session_state.confirmar_limpeza = True
-        st.warning("Esta ação é irreversível. Clique novamente em 'Limpar TODOS os Dados' para confirmar.")
+        st.warning("⚠️ ATENÇÃO: Esta ação é irreversível e apagará TODOS os dados permanentemente!")
+        st.warning("Clique novamente em 'Limpar TODOS os Dados' para confirmar.")
         return
 
-    # Limpar DataFrame de pesagens
-    st.session_state.pesagens = pd.DataFrame(columns=[
-        'DataHora', 'Funcionario', 'Codigo', 'Produto', 'Peso', 'Tara',
-        'PesoLiquido', 'ValorKg', 'ValorTotal', 'TipoOperacao',
-        'Sobra', 'FarinhaRosca', 'Torrada', 'DiferencaPeso',
-        'DiferencaValor', 'ImpactoCusto'
-    ])
+    # Limpeza completa dos dados
+    try:
+        # 1. Limpar DataFrame de pesagens
+        st.session_state.pesagens = pd.DataFrame(columns=[
+            'DataHora', 'Funcionario', 'Codigo', 'Produto', 'Peso', 'Tara',
+            'PesoLiquido', 'ValorKg', 'ValorTotal', 'TipoOperacao',
+            'Sobra', 'FarinhaRosca', 'Torrada', 'DiferencaPeso',
+            'DiferencaValor', 'ImpactoCusto'
+        ])
 
-    # Resetar valores e taras dos produtos para 0
-    for codigo in produtos:
-        produtos[codigo]['valor_kg'] = 0.0
-        produtos[codigo]['tara'] = 0.0
+        # 2. Resetar valores e taras dos produtos para 0
+        for codigo in produtos:
+            produtos[codigo]['valor_kg'] = 0.0
+            produtos[codigo]['tara'] = 0.0
 
-    # Limpar histórico diário
-    st.session_state.historico_diario = {}
+        # 3. Limpar histórico diário
+        st.session_state.historico_diario = {}
 
-    # Limpar seleções atuais
-    for key in ['codigo_selecionado', 'produto_selecionado', 'valor_kg', 'tara',
-                'confirmar_limpeza', 'dados_carregados', 'produtos_carregados']:
-        if key in st.session_state:
-            del st.session_state[key]
+        # 4. Limpar arquivo de dados JSON
+        if os.path.exists('dados_padaria.json'):
+            os.remove('dados_padaria.json')
 
-    # Limpar arquivo de dados
-    if os.path.exists('dados_padaria.json'):
-        os.remove('dados_padaria.json')
-
-    # Criar novo arquivo vazio para evitar erros
-    with open('dados_padaria.json', 'w') as f:
-        json.dump({
+        # 5. Criar novo arquivo JSON vazio com estrutura básica
+        dados_iniciais = {
             'pesagens': [],
             'produtos': {codigo: {'nome': info['nome'], 'valor_kg': 0.0, 'tara': 0.0}
-                        for codigo, info in produtos.items()},
+                         for codigo, info in produtos.items()},
             'historico_diario': {}
-        }, f)
+        }
 
-    st.success("Todos os dados foram limpos com sucesso! A página será recarregada.")
-    time.sleep(2)
-    st.rerun()
-# Painel lateral com lista de produtos e busca
+        with open('dados_padaria.json', 'w') as f:
+            json.dump(dados_iniciais, f, indent=4)
+
+        # 6. Limpar cache e variáveis de sessão
+        keys_to_clear = [
+            'codigo_selecionado', 'produto_selecionado', 'valor_kg', 'tara',
+            'confirmar_limpeza', 'dados_carregados', 'produtos_carregados'
+        ]
+
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+
+        st.success("✅ Todos os dados foram limpos com sucesso! O sistema será recarregado.")
+        time.sleep(2)
+
+        # Forçar recarregamento completo da página
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"❌ Ocorreu um erro ao limpar os dados: {str(e)}")
+        st.error("Por favor, tente novamente ou reinicie o aplicativo manualmente.")# Painel lateral com lista de produtos e busca
 def painel_lateral():
     st.sidebar.title("🔍 Busca de Produtos")
 
@@ -315,6 +329,7 @@ def painel_lateral():
 
     if st.sidebar.button("🧹 Limpar TODOS os Dados", use_container_width=True,
                          help="Limpa todos os dados, incluindo valores e taras cadastrados"):
+        limpar_todos_dados()
         if st.sidebar.checkbox("CONFIRMAR: Limpar TODOS os dados permanentemente?"):
             limpar_todos_dados()# Função para gerenciar a base de produtos
 # Função para gerenciar a base de produtos
