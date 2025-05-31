@@ -8,6 +8,8 @@ from fpdf import FPDF
 import os
 import base64
 import json
+import shutil
+
 
 # Configuração inicial da página
 st.set_page_config(page_title="Sistema de Balança e Controle - Padaria", layout="wide")
@@ -142,15 +144,25 @@ if 'historico_diario' not in st.session_state:
 # Funções para persistência de dados
 def salvar_dados():
     """Salva os dados atuais em um arquivo JSON"""
-    dados = {
-        'pesagens': st.session_state.pesagens.to_dict(orient='records'),
-        'produtos': produtos,
-        'historico_diario': st.session_state.historico_diario
-    }
-    with open('dados_padaria.json', 'w') as f:
-        json.dump(dados, f, default=str)
+    try:
+        # Criar backup antes de salvar
+        if os.path.exists('dados_padaria.json'):
+            backup_file = f"backup_dados_padaria_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            shutil.copy2('dados_padaria.json', backup_file)
 
+        dados = {
+            'pesagens': st.session_state.pesagens.to_dict(orient='records'),
+            'produtos': produtos,
+            'historico_diario': st.session_state.historico_diario
+        }
 
+        with open('dados_padaria.json', 'w') as f:
+            json.dump(dados, f, default=str, indent=4)
+
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados: {str(e)}")
+        return False
 def carregar_dados():
     """Carrega os dados do arquivo JSON se existir"""
     try:
@@ -170,8 +182,6 @@ def carregar_dados():
             return True
     except (FileNotFoundError, json.JSONDecodeError):
         return False
-
-
 def salvar_historico_diario():
     """Salva os dados do dia atual no histórico"""
     hoje = datetime.now().strftime('%Y-%m-%d')
@@ -182,8 +192,6 @@ def salvar_historico_diario():
     if not df_hoje.empty:
         st.session_state.historico_diario[hoje] = df_hoje.to_dict(orient='records')
         salvar_dados()
-
-
 def limpar_dados_dia():
     """Limpa os dados do dia atual"""
     hoje = datetime.now().strftime('%Y-%m-%d')
@@ -192,10 +200,16 @@ def limpar_dados_dia():
         ]
     salvar_historico_diario()
     st.success(f"Dados do dia {hoje} salvos no histórico e limpos!")
-
-
+# Limpar histórico diário
 def limpar_todos_dados():
-    """Limpa todos os dados do sistema"""
+    """Limpa todos os dados do sistema de forma definitiva"""
+    # Confirmar ação
+    if not st.session_state.get('confirmar_limpeza', False):
+        st.session_state.confirmar_limpeza = True
+        st.warning("Esta ação é irreversível. Clique novamente em 'Limpar TODOS os Dados' para confirmar.")
+        return
+
+    # Limpar DataFrame de pesagens
     st.session_state.pesagens = pd.DataFrame(columns=[
         'DataHora', 'Funcionario', 'Codigo', 'Produto', 'Peso', 'Tara',
         'PesoLiquido', 'ValorKg', 'ValorTotal', 'TipoOperacao',
@@ -203,16 +217,36 @@ def limpar_todos_dados():
         'DiferencaValor', 'ImpactoCusto'
     ])
 
-    # Resetar valores e taras dos produtos
+    # Resetar valores e taras dos produtos para 0
     for codigo in produtos:
         produtos[codigo]['valor_kg'] = 0.0
         produtos[codigo]['tara'] = 0.0
 
+    # Limpar histórico diário
     st.session_state.historico_diario = {}
-    salvar_dados()
-    st.success("Todos os dados foram limpos com sucesso!")
 
+    # Limpar seleções atuais
+    for key in ['codigo_selecionado', 'produto_selecionado', 'valor_kg', 'tara',
+                'confirmar_limpeza', 'dados_carregados', 'produtos_carregados']:
+        if key in st.session_state:
+            del st.session_state[key]
 
+    # Limpar arquivo de dados
+    if os.path.exists('dados_padaria.json'):
+        os.remove('dados_padaria.json')
+
+    # Criar novo arquivo vazio para evitar erros
+    with open('dados_padaria.json', 'w') as f:
+        json.dump({
+            'pesagens': [],
+            'produtos': {codigo: {'nome': info['nome'], 'valor_kg': 0.0, 'tara': 0.0}
+                        for codigo, info in produtos.items()},
+            'historico_diario': {}
+        }, f)
+
+    st.success("Todos os dados foram limpos com sucesso! A página será recarregada.")
+    time.sleep(2)
+    st.rerun()
 # Painel lateral com lista de produtos e busca
 def painel_lateral():
     st.sidebar.title("🔍 Busca de Produtos")
@@ -227,6 +261,8 @@ def painel_lateral():
         st.session_state.menu_choice = "relatorio"
     if st.sidebar.button("🗃️ Histórico", use_container_width=True):
         st.session_state.menu_choice = "historico"
+    if st.sidebar.button("⚙️ Configurar Produtos", use_container_width=True):
+        st.session_state.menu_choice = "produtos"
 
     # Lista completa de produtos para referência
     st.sidebar.markdown("---")
@@ -277,17 +313,67 @@ def painel_lateral():
         carregar_dados()
         st.sidebar.success("Dados carregados!")
 
-    if st.sidebar.button("🗑️ Limpar Dados do Dia", use_container_width=True,
-                         help="Salva os dados do dia no histórico e limpa para um novo dia"):
-        limpar_dados_dia()
-
     if st.sidebar.button("🧹 Limpar TODOS os Dados", use_container_width=True,
                          help="Limpa todos os dados, incluindo valores e taras cadastrados"):
-        if st.sidebar.checkbox("Confirmar limpeza total de todos os dados?"):
-            limpar_todos_dados()
+        if st.sidebar.checkbox("CONFIRMAR: Limpar TODOS os dados permanentemente?"):
+            limpar_todos_dados()# Função para gerenciar a base de produtos
+# Função para gerenciar a base de produtos
+def gerenciar_produtos():
+    st.title("⚙️ Configuração de Produtos")
 
+    # Carregar produtos existentes ao iniciar
+    if not st.session_state.get('produtos_carregados', False):
+        carregar_dados()
+        st.session_state.produtos_carregados = True
 
-# Função para gerar PDF (não implementada ainda)
+    # Seção para adicionar/editar produtos
+    st.subheader("Adicionar/Editar Produto")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        codigo = st.text_input("Código do Produto", key="prod_codigo")
+    with col2:
+        # Buscar nome do produto se o código existir
+        nome_produto = produtos.get(codigo, {}).get('nome', '') if codigo else ''
+        produto = st.text_input("Nome do Produto", value=nome_produto, key="prod_nome")
+    with col3:
+        # Mostrar tara e valor atual se o produto existir
+        tara = st.number_input("Tara (kg)",
+                               min_value=0.0,
+                               step=0.001,
+                               format="%.3f",
+                               value=produtos.get(codigo, {}).get('tara', 0.0) if codigo else 0.0,
+                               key="prod_tara")
+
+    col4, col5 = st.columns(2)
+    with col4:
+        valor_kg = st.number_input("Valor por kg (R$)",
+                                   min_value=0.0,
+                                   step=0.01,
+                                   format="%.2f",
+                                   value=produtos.get(codigo, {}).get('valor_kg', 0.0) if codigo else 0.0,
+                                   key="prod_valor")
+    with col5:
+        st.write("")  # Espaço vazio para alinhamento
+        if st.button("💾 Salvar Produto", use_container_width=True, key="salvar_prod"):
+            if codigo and produto:
+                # Atualizar ou criar o produto
+                produtos[codigo] = {
+                    "nome": produto,
+                    "valor_kg": valor_kg,
+                    "tara": tara
+                }
+                if salvar_dados():  # Garantir que os dados sejam salvos
+                    st.success(f"Produto {codigo} - {produto} salvo com sucesso!")
+                    # Forçar atualização imediata dos valores na sessão
+                    st.session_state.codigo_selecionado = codigo
+                    st.session_state.produto_selecionado = produto
+                    st.session_state.valor_kg = valor_kg
+                    st.session_state.tara = tara
+                    st.rerun()
+            else:
+                st.error("Código e nome do produto são obrigatórios!")
 def gerar_pdf_tabela(df_tabela):
     # Configurações do PDF
     pdf = FPDF(orientation='L', unit='mm', format='A4')
@@ -373,8 +459,6 @@ def gerar_pdf_tabela(df_tabela):
     nome_arquivo = f"relatorio_producao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     pdf.output(nome_arquivo)
     return nome_arquivo
-
-
 # Função para exibir a tabela de produtos cadastrados
 def exibir_tabela_produtos():
     if not st.session_state.pesagens.empty:
@@ -476,8 +560,6 @@ def exibir_tabela_produtos():
 
     else:
         st.info("Nenhum produto cadastrado ainda. Use a simulação de balança para registrar produtos.")
-
-
 # Função para simulação de balança
 def simulacao_balanca():
     st.title("⚖️ Simulação de Balança")
@@ -515,46 +597,14 @@ def simulacao_balanca():
                                    value=0.0)
 
         with col2:
-            # Controles para tara
             tara = st.number_input("Tara (kg)", min_value=0.0, step=0.001, format="%.3f",
                                    value=st.session_state.get('tara', 0.0),
                                    key="tara_input")
 
-            # Botões para gerenciar tara
-            col_tara1, col_tara2 = st.columns(2)
-            with col_tara1:
-                if st.form_submit_button("💾 Salvar Tara"):
-                    if codigo in produtos:
-                        produtos[codigo]['tara'] = tara
-                        st.session_state.tara = tara
-                        st.success(f"Tara salva em {tara:.3f} kg para {produto}")
-            with col_tara2:
-                if st.form_submit_button("🔄 Limpar Tara"):
-                    st.session_state.tara = 0.0
-                    if codigo in produtos:
-                        produtos[codigo]['tara'] = 0.0
-                    st.success("Tara limpa!")
-
-            # Controles para valor por kg
             valor_kg = st.number_input("Valor por kg (R$)", min_value=0.0, step=0.01,
                                        value=st.session_state.get('valor_kg', 0.0),
                                        format="%.2f",
                                        key="valor_kg_input")
-
-            # Botões para gerenciar valor
-            col_valor1, col_valor2 = st.columns(2)
-            with col_valor1:
-                if st.form_submit_button("💾 Salvar Valor"):
-                    if codigo in produtos:
-                        produtos[codigo]['valor_kg'] = valor_kg
-                        st.session_state.valor_kg = valor_kg
-                        st.success(f"Valor salvo em R$ {valor_kg:.2f} para {produto}")
-            with col_valor2:
-                if st.form_submit_button("🔄 Limpar Valor"):
-                    st.session_state.valor_kg = 0.0
-                    if codigo in produtos:
-                        produtos[codigo]['valor_kg'] = 0.0
-                    st.success("Valor limpo!")
 
             funcionario = st.text_input("Funcionário Responsável", "Padrão")
 
@@ -625,8 +675,6 @@ def simulacao_balanca():
 
     # Exibir tabela de produtos cadastrados
     exibir_tabela_produtos()
-
-
 # Função para visualização de dados e relatórios
 def visualizacao_dados():
     st.title("📊 Visualização de Dados")
@@ -727,8 +775,6 @@ def visualizacao_dados():
     # Tabela detalhada
     st.subheader("Histórico Completo")
     st.dataframe(df_filtrado, use_container_width=True)
-
-
 # Função para exibir histórico diário
 def exibir_historico():
     st.title("🗃️ Histórico Diário")
@@ -762,7 +808,7 @@ def exibir_historico():
         # Opção para exportar
         if st.button("Exportar Dados desta Data"):
             nome_arquivo = f"historico_{data_selecionada}.csv"
-            df_historico.to_csv(nome_arquivo, index=False)
+            df_historico.to_csv(nome_arquivo, index=False, encoding='utf-8-sig')
 
             with open(nome_arquivo, "rb") as f:
                 st.download_button(
@@ -773,8 +819,6 @@ def exibir_historico():
                 )
 
             os.remove(nome_arquivo)
-
-
 # Função para gerar relatórios em PDF em modo paisagem (não implementada ainda)
 def gerar_relatorio_pdf():
     if st.session_state.pesagens.empty:
@@ -954,8 +998,6 @@ def gerar_relatorio_pdf():
 
         # Remover arquivo temporário
         os.remove(nome_arquivo)
-
-
 # Função para exportar dados
 def exportar_dados():
     if st.session_state.pesagens.empty:
@@ -984,8 +1026,6 @@ def exportar_dados():
 
         # Remover arquivo temporário
         os.remove(nome_arquivo)
-
-
 # Função principal
 def main():
     if 'menu_choice' not in st.session_state:
@@ -1006,7 +1046,8 @@ def main():
         gerar_relatorio_pdf()
     elif st.session_state.menu_choice == "historico":
         exibir_historico()
-
+    elif st.session_state.menu_choice == "produtos":
+        gerenciar_produtos()
 
 if __name__ == "__main__":
     main()

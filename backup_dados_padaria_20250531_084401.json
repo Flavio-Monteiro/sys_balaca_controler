@@ -397,8 +397,8 @@
         },
         "4251": {
             "nome": "P\u00c3O FRANC\u00caS",
-            "valor_kg": 12.99,
-            "tara": 1.15
+            "valor_kg": 150.0,
+            "tara": 5.0
         },
         "3822": {
             "nome": "P\u00c3O HAMB\u00daRGUER",
