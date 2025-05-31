@@ -562,7 +562,7 @@ def exibir_tabela_produtos():
         st.info("Nenhum produto cadastrado ainda. Use a simulação de balança para registrar produtos.")
 # Função para simulação de balança
 def simulacao_balanca():
-    st.title("⚖️ Simulação de Balança")
+    st.title("⚖️ Gestão e Controle de produção ")
 
     # Seção de busca do produto
     col_busca1, col_busca2 = st.columns([1, 3])
