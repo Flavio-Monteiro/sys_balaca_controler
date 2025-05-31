@@ -1,0 +1,76 @@
+{
+    "Pão Francês - 30/05/2025 08:11": {
+        "recipe": "Pão Francês",
+        "flour_amount": 10.0,
+        "date": "30/05/2025 08:11",
+        "ingredients": [
+            {
+                "Ingrediente": "Farinha de trigo",
+                "Quantidade Original": 25.0,
+                "Quantidade Calculada": "10 kg"
+            },
+            {
+                "Ingrediente": "Melhorador",
+                "Quantidade Original": 0.25,
+                "Quantidade Calculada": "0.100 kg"
+            },
+            {
+                "Ingrediente": "Fermento",
+                "Quantidade Original": 0.15,
+                "Quantidade Calculada": "0.060 kg"
+            },
+            {
+                "Ingrediente": "Sal",
+                "Quantidade Original": 0.5,
+                "Quantidade Calculada": "0.200 kg"
+            },
+            {
+                "Ingrediente": "Açúcar",
+                "Quantidade Original": 0.25,
+                "Quantidade Calculada": "0.100 kg"
+            },
+            {
+                "Ingrediente": "Margarina",
+                "Quantidade Original": 0.4,
+                "Quantidade Calculada": "0.160 kg"
+            }
+        ]
+    },
+    "Pão Francês - 30/05/2025 08:29": {
+        "recipe": "Pão Francês",
+        "flour_amount": 10.0,
+        "date": "30/05/2025 08:29",
+        "ingredients": [
+            {
+                "Ingrediente": "Farinha de trigo",
+                "Quantidade Original": 25.0,
+                "Quantidade Calculada": "10 kg"
+            },
+            {
+                "Ingrediente": "Melhorador",
+                "Quantidade Original": 0.25,
+                "Quantidade Calculada": "100 g"
+            },
+            {
+                "Ingrediente": "Fermento",
+                "Quantidade Original": 0.15,
+                "Quantidade Calculada": "60 g"
+            },
+            {
+                "Ingrediente": "Sal",
+                "Quantidade Original": 0.5,
+                "Quantidade Calculada": "200 g"
+            },
+            {
+                "Ingrediente": "Açúcar",
+                "Quantidade Original": 0.25,
+                "Quantidade Calculada": "100 g"
+            },
+            {
+                "Ingrediente": "Margarina",
+                "Quantidade Original": 0.4,
+                "Quantidade Calculada": "160 g"
+            }
+        ]
+    }
+}

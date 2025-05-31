@@ -1,0 +1,64 @@
+{
+    "Pão Francês": {
+        "farinha": 25,
+        "ingredientes": {
+            "Melhorador": 0.25,
+            "fermento": 0.15,
+            "sal": 0.5,
+            "açúcar": 0.25,
+            "margarina": 0.4
+        }
+    },
+    "Pão Doce": {
+        "farinha": 30,
+        "ingredientes": {
+            "Melhorador": 2.3,
+            "leite em pó": 0.6,
+            "sal": 0.35,
+            "açúcar": 5,
+            "margarina": 1,
+            "ovos": 3,
+            "fermento": 0.3
+        }
+    },
+    "Regalia Integral": {
+        "farinha": 5,
+        "ingredientes": {
+            "farinha de trigo integral": 5,
+            "sal": 0.05,
+            "Melhorador": 0.01,
+            "esponja de francês": 2
+        }
+    },
+    "Bolacha Sete Capas": {
+        "farinha": 25,
+        "ingredientes": {
+            "açúcar": 4,
+            "sal": 0.5,
+            "cocos": 8,
+            "leite": 3,
+            "leite em pó": 0.8,
+            "margarina": 4
+        }
+    },
+    "Cacetinho e Rosquinha": {
+        "farinha": 10,
+        "ingredientes": {
+            "sal": 0.2,
+            "açúcar": 0.05,
+            "fermento": 0.05,
+            "margarina": 0.5,
+            "coco seco": 0.6,
+            "leite de coco": 1
+        }
+    },
+    "Ragalia": {
+        "farinha": 10,
+        "ingredientes": {
+            "sal": 0.2,
+            "óleo": 0.8,
+            "fermento": 0.01,
+            "esponja de francês": 2
+        }
+    }
+}
